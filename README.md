@@ -50,3 +50,5 @@ Bu proje hâlâ frontend demo + API hazırlık aşamasındadır. Sepet yalnızca
 
 ### Loading and motion
 The site includes a KEYORA-branded loading overlay on initial load and route changes, plus scroll-reveal transitions for major sections and product cards. The motion respects the browser's `prefers-reduced-motion` setting.
+
+KEYORA deployment update
