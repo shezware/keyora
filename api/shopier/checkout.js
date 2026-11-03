@@ -9,8 +9,10 @@ const amount = cents => (cents / 100).toFixed(2);
 async function findOrder(quote, headers) {
   const title = 'KEYORA Sipariş #' + quote.orderId;
   for (let page = 1; page <= 20; page++) {
-    const query = new URLSearchParams({ limit: '50', page: String(page), sort: 'dateDesc', customListing: 'true', dateStart: new Date(quote.createdAt - 60000).toISOString() });
-    const response = await fetch(BASE + '/products?' + query, { headers, signal: AbortSignal.timeout(12000) });
+    const query = new URLSearchParams({ limit: '50', page: String(page), sort: 'dateDesc' });
+    let response;
+    try { response = await fetch(BASE + '/products?' + query, { headers, signal: AbortSignal.timeout(12000) }); }
+    catch { throw new CheckoutError('shopier_lookup_failed', 502); }
     if (!response.ok) throw new CheckoutError('shopier_lookup_failed', 502);
     const products = await response.json();
     if (!Array.isArray(products)) throw new CheckoutError('unexpected_shopier_response', 502);

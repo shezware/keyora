@@ -84,7 +84,7 @@ export async function beginCheckout(form, cart, showToast) {
     let result;
     try { result = await request({ action: 'create', token }); }
     catch (error) {
-      if (['shopier_permission_denied', 'invalid_quote', 'quote_expired', 'shopier_not_configured'].includes(error.message)) localStorage.removeItem(STORAGE);
+      if (['shopier_permission_denied', 'invalid_quote', 'quote_expired', 'shopier_not_configured', 'shopier_lookup_failed', 'lookup_limit_reached'].includes(error.message)) localStorage.removeItem(STORAGE);
       throw error;
     }
     savePending({ ...pending, ...result, stage: 'ready' });
@@ -94,6 +94,7 @@ export async function beginCheckout(form, cart, showToast) {
     const message = error.message === 'storage_unavailable' ? 'Tarayıcıda site depolamasına izin ver. Henüz ödeme bağlantısı oluşturulmadı.'
       : messages[error.message] || (readPending()?.stage === 'creating' ? messages.creation_outcome_unknown : 'Shopier’e bağlanılamadı. Biraz sonra tekrar dene.');
     tell(message + (pending?.orderId ? ' Sipariş: ' + pending.orderId : ''));
+    if (error.message === 'order_not_found') addNewOrderButton(form);
   } finally { busy = false; button.disabled = false; }
 }
 
