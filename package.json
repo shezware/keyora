@@ -8,9 +8,12 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "qa:static": "node qa-static.mjs",
-    "test": "node --test lib/checkout.test.js src/shopier-checkout.test.js api/shopier/products.test.js"
+    "test": "node --test lib/checkout.test.js src/shopier-checkout.test.js api/shopier/products.test.js api/auth/config.test.js src/account.test.js"
   },
   "devDependencies": {
     "vite": "^6.1.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0"
   }
 }

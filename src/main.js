@@ -1,6 +1,8 @@
 import './style.css';
+import './account.css';
 import { products } from '../lib/catalog.js';
 import { beginCheckout, checkoutMarkup } from './shopier-checkout.js';
+import { accountLabel, accountMarkup, initAccount, memberAction, submitMember } from './account.js';
 
 const shopierProductLinks = {};
 
@@ -73,7 +75,7 @@ function header(){
       ${categories.slice(1).map(c=>`<button data-category="${c}" class="${state.category===c?'active':''}">${c}</button>`).join('')}
       <button data-page="about">Marka</button>
     </nav>
-    <div class="header-actions"><button class="icon-btn search-toggle" aria-label="Arama" data-action="focus-search">⌕</button><button class="cart-button" data-action="cart"><span class="cart-icon">▱</span><span>Sepet</span><b>${state.cart.reduce((n,x)=>n+x.qty,0)}</b></button><button class="menu-toggle" data-action="menu" aria-label="Menüyü aç/kapat">☰</button></div>
+    <div class="header-actions"><button class="icon-btn search-toggle" aria-label="Arama" data-action="focus-search">⌕</button><button class="member-header" data-page="account" aria-label="${accountLabel()}"><span aria-hidden="true">◎</span><span>${accountLabel()}</span></button><button class="cart-button" data-action="cart"><span class="cart-icon">▱</span><span>Sepet</span><b>${state.cart.reduce((n,x)=>n+x.qty,0)}</b></button><button class="menu-toggle" data-action="menu" aria-label="Menüyü aç/kapat">☰</button></div>
   </header>`;
 }
 function footer(){
@@ -103,7 +105,7 @@ function contentPage(page){
  faq:['YARDIM MERKEZİ','Aklındaki sorular.','Sepet ve Shopier ödeme bağlantısı hakkında sık sorulan sorular.'],
  shipping:['BİLGİLENDİRME','Teslimat & iade.','Bu proje demo amaçlıdır. Gerçek kargo gönderimi, iade işlemi veya sipariş takibi yapılmaz. Canlı mağaza kurulurken teslimat süreleri, iade şartları ve tüketici mevzuatı işletmenin gerçek süreçlerine göre düzenlenmelidir.'],
  contact:['BİZE ULAŞ','Bir fikrin mi var?','Bu demo sitesinde gerçek bir iletişim kanalı bulunmamaktadır. İletişim formu gönderim yapmaz ve kişisel verileri saklamaz.'],
- privacy:['YASAL BİLGİ','Gizlilik yaklaşımı.','KEYORA kart bilgisi toplamaz. Ödeme ve teslimat bilgileri Shopier üzerinde alınır. Sepet ve ödeme bağlantısı bu tarayıcıda saklanır; bağlantı oluşturulurken ürün kodları, adetler ve seçilen varyasyonlar sunucuya gönderilir. Gerçek bir mağaza için gizlilik metni, çerez yönetimi ve veri işleme süreçleri ayrıca tasarlanmalıdır.'],
+ privacy:['YASAL BİLGİ','Gizlilik yaklaşımı.','KEYORA kart bilgisi toplamaz. Ödeme ve teslimat bilgileri Shopier üzerinde alınır. Üyelik oluşturduğunda ad soyad, e-posta ve kayıt tarihi hesabın için Supabase altyapısında saklanır. Şifreler kimlik doğrulama servisi tarafından korunur; site yönetimi şifreni görüntüleyemez. Oturum bilgisi bu tarayıcıda saklanır. Sepet ve ödeme bağlantısı bu tarayıcıda saklanır; bağlantı oluşturulurken ürün kodları, adetler ve seçilen varyasyonlar sunucuya gönderilir. Gerçek bir mağaza için gizlilik metni, çerez yönetimi ve veri işleme süreçleri ayrıca tasarlanmalıdır.'],
  terms:['YASAL BİLGİ','Kullanım koşulları.','KEYORA bu proje kapsamında kurgusal bir markadır. Ürünler, stoklar, fiyatlar, değerlendirmeler ve kampanyalar demo verileridir; gerçek satış teklifi oluşturmaz.']
  };
  const [eyebrow,title,desc]=pages[page]||pages.about;
@@ -130,6 +132,7 @@ function render(){
  if(state.page==='home') pageHtml=home();
  else if(state.page==='catalog') pageHtml=catalog();
  else if(state.page==='checkout') pageHtml=checkoutPage();
+ else if(state.page==='account') pageHtml=accountMarkup();
  else if(state.page==='404') pageHtml=notFound();
  else pageHtml=contentPage(state.page);
  app.innerHTML=header()+pageHtml+footer()+(state.selected?detailModal(products.find(p=>p.id===state.selected)): '')+(state.page==='cart'?cartDrawer():'')+(state.toast?`<div class="toast" role="status"><span>✓</span>${escapeHtml(state.toast)}</div>`:'');
@@ -200,6 +203,7 @@ function addToCart(id){
 app.addEventListener('click',e=>{
  const el=e.target.closest('button,a,[data-action],[data-open],[data-add],[data-category],[data-page],[data-qty],[data-cartqty],[data-remove],[data-color],[data-switch],[data-connection]');
  if(!el)return;
+ if(el.dataset.member){memberAction(el.dataset.member);return;}
  // Close overlays only when the backdrop itself is clicked; clicks inside the dialog remain interactive.
  if((el.classList.contains('modal-backdrop') || el.classList.contains('drawer-backdrop')) && e.target !== el)return;
  if(el.dataset.open){state.selected=el.dataset.open;render();return;}
@@ -235,7 +239,10 @@ app.addEventListener('input',e=>{
 });
 app.addEventListener('submit',e=>{
  e.preventDefault();
- if(e.target.id==='checkout-form'){
+ if(e.target.id==='member-form'){
+   submitMember(e.target);
+ }
+ else if(e.target.id==='checkout-form'){
    beginCheckout(e.target, state.cart, showToast);
  }
  else if(e.target.id==='contact-form'){showToast('Demo formu doğrulandı; veri gönderilmedi.');e.target.reset();}
@@ -253,13 +260,21 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('popstate',()=>{
  const path=location.pathname.replace(/^\/|\/$/g,'');
  if(!path)state.page='home';
- else if(path==='catalog'||path==='checkout'||path==='about'||path==='faq'||path==='contact'||path==='shipping'||path==='privacy'||path==='terms'||path==='success')state.page=path;
+ else if(path==='catalog'||path==='checkout'||path==='account'||path==='about'||path==='faq'||path==='contact'||path==='shipping'||path==='privacy'||path==='terms'||path==='success')state.page=path;
  else state.page='404';
  state.selected=null;render();showBrandLoader(420);
 });
 const initialPath=location.pathname.replace(/^\/|\/$/g,'');
 if(initialPath==='')state.page='home';
-else if(['catalog','checkout','about','faq','contact','shipping','privacy','terms','success'].includes(initialPath))state.page=initialPath;
+else if(['catalog','checkout','account','about','faq','contact','shipping','privacy','terms','success'].includes(initialPath))state.page=initialPath;
 else state.page='404';
 render();
 showBrandLoader(900);
+initAccount(() => {
+ if(state.page==='account') render();
+ else document.querySelectorAll('.member-header').forEach(button => {
+   button.setAttribute('aria-label', accountLabel());
+   button.lastElementChild.textContent = accountLabel();
+ });
+});
+
