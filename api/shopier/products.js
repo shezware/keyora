@@ -22,15 +22,25 @@ function findItems(payload) {
 }
 
 function safeProduct(p) {
+  // Shopier Product model: priceData holds prices; media is ranked by placement.
+  const priceData = p?.priceData;
+  const images = Array.isArray(p?.media)
+    ? p.media.filter(media => media?.type === 'image' && typeof media.url === 'string' && media.url.trim())
+    : [];
+  const image = images.reduce((first, media) => {
+    const rank = item => Number.isInteger(item?.placement) && item.placement >= 1 ? item.placement : Infinity;
+    return !first || rank(media) < rank(first) ? media : first;
+  }, null);
   return {
     id: p?.id ?? p?.productId ?? null,
     title: p?.title ?? p?.name ?? null,
-    price: p?.price ?? p?.salePrice ?? null,
-    currency: p?.currency ?? 'TRY',
+    price: (priceData?.discount === true ? priceData.discountedPrice : null)
+      ?? priceData?.price ?? p?.price ?? p?.salePrice ?? null,
+    currency: priceData?.currency ?? p?.currency ?? 'TRY',
     stockQuantity: p?.stockQuantity ?? p?.stock ?? null,
-    status: p?.status ?? null,
+    status: p?.stockStatus ?? p?.status ?? null,
     url: p?.url ?? p?.productUrl ?? null,
-    imageUrl: p?.imageUrl ?? p?.image ?? null,
+    imageUrl: image?.url ?? p?.imageUrl ?? p?.image ?? null,
   };
 }
 
